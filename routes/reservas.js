@@ -25,13 +25,15 @@ router.post('/', async (req, res) => {
     numero_factura,
     totalPagado,
     tipo_contacto,
-    tipo_pago
+    tipo_pago,
+    habitaciones // <-- Recibe el array de habitaciones
   } = req.body;
 
-  // Calcular saldo_pendiente
   const saldo_pendiente = Number(totalPagado) - Number(valorAnticipo);
 
   try {
+    console.log('Datos recibidos en reserva:', req.body);
+
     const [result] = await db.query(
       `INSERT INTO Reservas 
       (id_huesped, fechaReservacion, fechaAnticipo, valorAnticipo, fecha_ingreso, fecha_salida, fecha_factura, numero_factura, totalPagado, tipo_contacto, tipo_pago, saldo_pendiente) 
@@ -51,11 +53,33 @@ router.post('/', async (req, res) => {
         saldo_pendiente
       ]
     );
-    res.json({ id_reserva: result.insertId, saldo_pendiente });
+    const id_reserva = result.insertId;
+    console.log('Reserva creada con ID:', id_reserva);
+
+    // Guardar habitaciones asociadas
+    if (habitaciones && Array.isArray(habitaciones)) {
+      console.log('Habitaciones a guardar:', habitaciones);
+      for (const id_habitacion of habitaciones) {
+        try {
+          const insertResult = await db.query(
+            'INSERT INTO Reservas_Habitaciones (id_reserva, id_habitacion) VALUES (?, ?)',
+            [id_reserva, id_habitacion]
+          );
+          console.log(`Habitación ${id_habitacion} asociada a reserva ${id_reserva}`, insertResult);
+        } catch (err) {
+          console.error('Error guardando habitación:', id_habitacion, err.message);
+        }
+      }
+    } else {
+      console.log('No se recibieron habitaciones para asociar.');
+    }
+
+    res.json({ id_reserva, saldo_pendiente });
   } catch (err) {
+    console.error('Error en reserva:', err.message);
     res.status(500).json({ error: err.message });
   }
-});
+}); 
 
 // Obtener todas las reservas con habitaciones asociadas
 router.get('/con-habitaciones', async (req, res) => {
@@ -79,13 +103,18 @@ router.put('/:id/pago-complemento', async (req, res) => {
   const { pago_complemento, fecha_pago_complemento } = req.body;
   const { id } = req.params;
   try {
-    // 1. Obtener el valorAnticipo actual
-    const [rows] = await db.query('SELECT valorAnticipo FROM Reservas WHERE id_reserva = ?', [id]);
+    // 1. Obtener el valorAnticipo y saldo_pendiente actual
+    const [rows] = await db.query('SELECT valorAnticipo, saldo_pendiente FROM Reservas WHERE id_reserva = ?', [id]);
     if (rows.length === 0) return res.status(404).json({ error: 'Reserva no encontrada' });
 
-    // Si valorAnticipo es null, lo tratamos como 0
     const valorAnticipoActual = Number(rows[0].valorAnticipo) || 0;
+    const saldoPendienteActual = Number(rows[0].saldo_pendiente) || 0;
     const pagoComplementoNum = Number(pago_complemento) || 0;
+
+    // Validar que el pago complemento no exceda el saldo pendiente
+    if (pagoComplementoNum > saldoPendienteActual) {
+      return res.status(400).json({ error: 'El pago complemento no puede ser mayor al saldo pendiente.' });
+    }
 
     // Sumar el pago complemento al anticipo
     const nuevoAnticipo = valorAnticipoActual + pagoComplementoNum;
@@ -103,5 +132,4 @@ router.put('/:id/pago-complemento', async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
-
 module.exports = router;

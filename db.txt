@@ -105,30 +105,54 @@ INSERT INTO Habitaciones (nombre) VALUES
 ('Habitación 6');
 
 -- Ejemplo de huésped y reserva de prueba:
--- INSERT INTO Huespedes (dni, primer_nombre, primer_apellido, telefono, ciudad, pais) VALUES ('123456', 'Juan', 'Pérez', '555-1234', 'Ciudad', 'País');
--- INSERT INTO Reservas (id_huesped, fechaReservacion, fechaAnticipo, valorAnticipo, fecha_ingreso, fecha_salida, fecha_factura, numero_factura, totalPagado, tipo_contacto, tipo_pago) VALUES (1, '2025-11-01', '2025-11-01', 1000, '2025-11-10', '2025-11-15', NULL, NULL, 5000, 'booking', 'efectivo');
+-- INSERT INTO Huespedes (dni, primer_nombre, primer_apellido, telefono, ciudad, pais)
+-- VALUES ('123456', 'Juan', 'Pérez', '555-1234', 'Ciudad', 'País');
+--
+-- INSERT INTO Reservas (
+--   id_huesped, fechaReservacion, fechaAnticipo, valorAnticipo,
+--   fecha_ingreso, fecha_salida, fecha_factura, numero_factura,
+--   totalPagado, tipo_contacto, tipo_pago
+-- ) VALUES (
+--   1, '2025-11-01', '2025-11-01', 1000,
+--   '2025-11-10', '2025-11-15', NULL, NULL,
+--   5000, 'booking', 'efectivo'
+-- );
 
 -- ==========================================================
 -- 5️⃣ CORRECCIÓN DE VALORES NULOS (si tienes datos previos)
 -- ==========================================================
-UPDATE Reservas SET valorAnticipo = 0 WHERE valorAnticipo IS NULL OR valorAnticipo = '';
-UPDATE Reservas SET totalPagado = 0 WHERE totalPagado IS NULL OR totalPagado = '';
-UPDATE Reservas SET saldo_pendiente = totalPagado - valorAnticipo WHERE saldo_pendiente IS NULL OR saldo_pendiente = '' OR saldo_pendiente != (totalPagado - valorAnticipo);
+
+-- 🔧 Desactivar modo seguro para evitar el Error 1175
+SET SQL_SAFE_UPDATES = 0;
+
+UPDATE Reservas
+SET valorAnticipo = 0
+WHERE (valorAnticipo IS NULL OR valorAnticipo = '')
+AND id_reserva > 0;
+
+UPDATE Reservas
+SET totalPagado = 0
+WHERE (totalPagado IS NULL OR totalPagado = '')
+AND id_reserva > 0;
+
+UPDATE Reservas
+SET saldo_pendiente = totalPagado - valorAnticipo
+WHERE (saldo_pendiente IS NULL OR saldo_pendiente = '' OR saldo_pendiente != (totalPagado - valorAnticipo))
+AND id_reserva > 0;
+
+-- 🔒 Volver a activar modo seguro (opcional)
+SET SQL_SAFE_UPDATES = 1;
 
 -- ==========================================================
--- 6️⃣ CONSULTAS
+-- 6️⃣ CONSULTAS DE VERIFICACIÓN
 -- ==========================================================
 SELECT * FROM Huespedes;
 SELECT * FROM Habitaciones;
 SELECT * FROM Reservas;
 SELECT * FROM Reservas_Habitaciones;
 
-DB_HOST=localhost
-DB_PORT=3306
-DB_USER=root
-#DB_PASSWORD=NFRmtc/*
-DB_PASSWORD=080324
-DB_NAME=Hotel
+
+SELECT * FROM Reservas_Habitaciones;
 
 
-
+SELECT * FROM Reservas_Habitaciones WHERE id_reserva = 10;
