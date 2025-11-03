@@ -1,0 +1,210 @@
+CREATE DATABASE IF NOT EXISTS Hotel;
+USE Hotel;
+
+DROP VIEW IF EXISTS HuespedesConNoches;
+DROP TRIGGER IF EXISTS trg_insert_huesped;
+DROP TRIGGER IF EXISTS trg_update_huesped;
+DROP TABLE IF EXISTS Huespedes;
+
+CREATE TABLE Huespedes(
+	id_huesped INT AUTO_INCREMENT PRIMARY KEY,
+    dni VARCHAR(50) NOT NULL,
+    nit VARCHAR(20),
+    primer_nombre VARCHAR(100) NOT NULL,
+    segundo_nombre VARCHAR(100),
+    primer_apellido VARCHAR(100) NOT NULL,
+    segundo_apellido VARCHAR(100),
+    apellido_casada VARCHAR(100),
+    fecha_nacimiento DATE,
+    telefono VARCHAR(50) NOT NULL,
+    ciudad VARCHAR(100) NOT NULL,
+    pais VARCHAR(150) NOT NULL,
+    fechaReservacion DATE NOT NULL,
+    fechaAnticipo DATE NOT NULL,
+    valorAnticipo DECIMAL(10,2) NOT NULL,
+	fecha_ingreso DATE NOT NULL,
+    fecha_salida DATE NOT NULL,
+    total_noches INT,
+    totalPagado DECIMAL(10,2) NOT NULL,
+    tipo_contacto ENUM('booking', 'airbnb', 'telefono', 'redes') NOT NULL,
+    tipo_pago ENUM('efectivo', 'transferencia', 'visalink') NOT NULL,
+    habitacion varchar(200) 
+);
+
+select * from Huespedes;
+
+DELIMITER $$
+
+CREATE TRIGGER trg_insert_huesped
+BEFORE INSERT ON Huespedes
+FOR EACH ROW
+BEGIN
+    SET NEW.total_noches = DATEDIFF(NEW.fecha_salida, NEW.fecha_ingreso);
+END$$
+
+CREATE TRIGGER trg_update_huesped
+BEFORE UPDATE ON Huespedes
+FOR EACH ROW
+BEGIN
+    SET NEW.total_noches = DATEDIFF(NEW.fecha_salida, NEW.fecha_ingreso);
+END$$
+
+DELIMITER ;
+
+
+
+/*INSERT INTO Huespedes (
+    dni, nit, primer_nombre, segundo_nombre, primer_apellido, segundo_apellido,
+    apellido_casada, fecha_nacimiento, telefono, ciudad, pais, 
+    fechaReservacion, fechaAnticipo, valorAnticipo, fecha_ingreso, fecha_salida, 
+    totalPagado, tipo_contacto, tipo_pago
+) VALUES
+('12345678', NULL, 'Juan', NULL, 'Pérez', 'Lopez', NULL, '1985-06-15', '5551234', 'Guatemala', 'Guatemala',
+ '2025-05-01', '2025-05-10', 150.00, '2025-06-01', '2025-06-05', 450.00, 'booking', 'efectivo'),
+-- (más filas como en tu ejemplo)
+('11221122', NULL, 'Elena', NULL, 'Reyes', 'Zamora', NULL, '1987-06-05', '5557777', 'Petén', 'Guatemala',
+ '2025-05-01', '2025-05-05', 160.00, '2025-06-01', '2025-06-06', 500.00, 'airbnb', 'visalink');
+*/
+
+-- ---------------------
+
+
+-- 6.A. Cantidad de huéspedes entre fechas
+SELECT COUNT(*) AS total_huespedes
+FROM Huespedes
+WHERE fecha_ingreso BETWEEN '2025-01-01' AND '2025-06-30';
+
+-- 6.B. Lista de huéspedes entre fechas
+SELECT *
+FROM Huespedes
+WHERE fecha_ingreso BETWEEN '2025-01-01' AND '2025-06-30';
+
+-- 6.C. Huéspedes que cumplen años en junio
+SELECT *
+FROM Huespedes
+WHERE MONTH(fecha_nacimiento) = 6;
+
+-- 6.D. Veces que vino cada huésped (todos los tiempos)
+SELECT 
+    dni, 
+    CONCAT(primer_nombre, ' ', primer_apellido) AS nombre,
+    COUNT(*) AS veces_que_vino
+FROM Huespedes
+GROUP BY dni
+ORDER BY veces_que_vino DESC;
+
+-- 6.E. Veces que vino cada huésped en rango de fechas
+SELECT 
+    dni, 
+    CONCAT(primer_nombre, ' ', primer_apellido) AS nombre,
+    COUNT(*) AS veces_que_vino
+FROM Huespedes
+WHERE fecha_ingreso BETWEEN '2025-01-01' AND '2025-06-30'
+GROUP BY dni
+ORDER BY veces_que_vino DESC;
+
+-- 6.F. Cantidad por tipo de contacto
+SELECT tipo_contacto, COUNT(*) AS cantidad
+FROM Huespedes
+GROUP BY tipo_contacto;
+
+-- 6.G. Cantidad por tipo de pago
+SELECT tipo_pago, COUNT(*) AS cantidad
+FROM Huespedes
+GROUP BY tipo_pago;
+
+-- 6.H. Promedio de noches por huésped
+SELECT 
+    dni,
+    CONCAT(primer_nombre, ' ', primer_apellido) AS nombre,
+    AVG(total_noches) AS promedio_noches
+FROM Huespedes
+GROUP BY dni
+ORDER BY promedio_noches DESC;
+
+-- 6.I. Total de noches ocupadas en un rango de fechas
+SELECT SUM(total_noches) AS noches_ocupadas
+FROM Huespedes
+WHERE fecha_ingreso BETWEEN '2025-01-01' AND '2025-06-30';
+
+-- 6.J. Cantidad de huéspedes por mes (fecha_ingreso)
+SELECT 
+    YEAR(fecha_ingreso) AS anio, 
+    MONTH(fecha_ingreso) AS mes, 
+    COUNT(*) AS cantidad
+FROM Huespedes
+GROUP BY anio, mes
+ORDER BY anio, mes;
+
+-- 6.K. Huéspedes con estancias largas (>5 noches)
+SELECT 
+    dni, 
+    CONCAT(primer_nombre, ' ', primer_apellido) AS nombre, 
+    total_noches
+FROM Huespedes
+WHERE total_noches > 5
+ORDER BY total_noches DESC;
+
+-- 6.L. Distribución de tipos de pago por mes
+SELECT 
+    YEAR(fecha_ingreso) AS anio, 
+    MONTH(fecha_ingreso) AS mes, 
+    tipo_pago, 
+    COUNT(*) AS cantidad
+FROM Huespedes
+GROUP BY anio, mes, tipo_pago
+ORDER BY anio, mes, tipo_pago;
+
+
+
+-- ------------------------------------
+
+-- M1. Cantidad de veces que se usó cada habitación
+SELECT 
+    habitacion, 
+    COUNT(*) AS veces_usada
+FROM Huespedes
+GROUP BY habitacion
+ORDER BY veces_usada DESC;
+
+-- M2. Total de noches por habitación
+SELECT 
+    habitacion, 
+    SUM(total_noches) AS noches_ocupadas
+FROM Huespedes
+GROUP BY habitacion
+ORDER BY noches_ocupadas DESC;
+
+-- M3. Total de ingresos por habitación
+SELECT 
+    habitacion, 
+    SUM(totalPagado) AS ingresos_totales
+FROM Huespedes
+GROUP BY habitacion
+ORDER BY ingresos_totales DESC;
+
+-- N1. Ingresos totales por día
+SELECT 
+    fecha_ingreso AS fecha, 
+    SUM(totalPagado) AS ingresos_diarios
+FROM Huespedes
+GROUP BY fecha
+ORDER BY fecha;
+
+-- N2. Ingresos totales por semana (ISO)
+SELECT 
+    YEAR(fecha_ingreso) AS anio, 
+    WEEK(fecha_ingreso, 1) AS semana_iso,
+    SUM(totalPagado) AS ingresos_semanales
+FROM Huespedes
+GROUP BY anio, semana_iso
+ORDER BY anio, semana_iso;
+
+-- N3. Ingresos totales por mes
+SELECT 
+    YEAR(fecha_ingreso) AS anio, 
+    MONTH(fecha_ingreso) AS mes,
+    SUM(totalPagado) AS ingresos_mensuales
+FROM Huespedes
+GROUP BY anio, mes
+ORDER BY anio, mes;
