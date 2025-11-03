@@ -1,0 +1,134 @@
+-- ==========================================================
+-- 1️⃣ BASE DE DATOS
+-- ==========================================================
+CREATE DATABASE IF NOT EXISTS Hotel;
+USE Hotel;
+
+-- ==========================================================
+-- 2️⃣ TABLAS
+-- ==========================================================
+DROP TABLE IF EXISTS Reservas_Habitaciones;
+DROP TABLE IF EXISTS Habitaciones;
+DROP TABLE IF EXISTS Reservas;
+DROP TABLE IF EXISTS Huespedes;
+
+-- ----------------------------------------------------------
+-- HUESPEDES
+-- ----------------------------------------------------------
+CREATE TABLE Huespedes (
+    id_huesped INT AUTO_INCREMENT PRIMARY KEY,
+    dni VARCHAR(50) NOT NULL UNIQUE,
+    nit VARCHAR(20),
+    primer_nombre VARCHAR(100) NOT NULL,
+    segundo_nombre VARCHAR(100),
+    primer_apellido VARCHAR(100) NOT NULL,
+    segundo_apellido VARCHAR(100),
+    apellido_casada VARCHAR(100),
+    fecha_nacimiento DATE,
+    telefono VARCHAR(50) NOT NULL,
+    ciudad VARCHAR(100) NOT NULL,
+    pais VARCHAR(150) NOT NULL
+);
+
+-- ----------------------------------------------------------
+-- RESERVAS
+-- ----------------------------------------------------------
+CREATE TABLE Reservas (
+    id_reserva INT AUTO_INCREMENT PRIMARY KEY,
+    id_huesped INT NOT NULL,
+    fechaReservacion DATE NOT NULL,
+    fechaAnticipo DATE NOT NULL,
+    valorAnticipo DECIMAL(10,2) NOT NULL DEFAULT 0,
+    fecha_ingreso DATE NOT NULL,
+    fecha_salida DATE NOT NULL,
+    total_noches INT,
+    fecha_factura DATE,
+    numero_factura VARCHAR(150),
+    totalPagado DECIMAL(10,2) NOT NULL DEFAULT 0,
+    tipo_contacto ENUM('booking','airbnb','telefono','facebook', 'instagram', 'whatsapp') NOT NULL,
+    tipo_pago ENUM('efectivo','transferencia','visalink','pos') NOT NULL,
+    saldo_pendiente DECIMAL(10,2) NOT NULL DEFAULT 0,
+    pago_complemento DECIMAL(10,2) NOT NULL DEFAULT 0,
+    fecha_pago_complemento DATE DEFAULT NULL,
+    FOREIGN KEY (id_huesped) REFERENCES Huespedes(id_huesped)
+);
+
+-- ----------------------------------------------------------
+-- HABITACIONES
+-- ----------------------------------------------------------
+CREATE TABLE Habitaciones (
+    id_habitacion INT AUTO_INCREMENT PRIMARY KEY,
+    nombre VARCHAR(100) NOT NULL
+);
+
+-- ----------------------------------------------------------
+-- RESERVAS_HABITACIONES
+-- ----------------------------------------------------------
+CREATE TABLE Reservas_Habitaciones (
+    id_reserva INT NOT NULL,
+    id_habitacion INT NOT NULL,
+    PRIMARY KEY (id_reserva, id_habitacion),
+    FOREIGN KEY (id_reserva) REFERENCES Reservas(id_reserva),
+    FOREIGN KEY (id_habitacion) REFERENCES Habitaciones(id_habitacion)
+);
+
+-- ==========================================================
+-- 3️⃣ TRIGGERS PARA TOTAL_NOCHES Y SALDO_PENDIENTE
+-- ==========================================================
+DELIMITER $$
+CREATE TRIGGER trg_insert_reserva
+BEFORE INSERT ON Reservas
+FOR EACH ROW
+BEGIN
+    SET NEW.total_noches = DATEDIFF(NEW.fecha_salida, NEW.fecha_ingreso);
+    SET NEW.saldo_pendiente = NEW.totalPagado - NEW.valorAnticipo;
+END$$
+
+CREATE TRIGGER trg_update_reserva
+BEFORE UPDATE ON Reservas
+FOR EACH ROW
+BEGIN
+    SET NEW.total_noches = DATEDIFF(NEW.fecha_salida, NEW.fecha_ingreso);
+    SET NEW.saldo_pendiente = NEW.totalPagado - NEW.valorAnticipo;
+END$$
+DELIMITER ;
+
+-- ==========================================================
+-- 4️⃣ DATOS DE PRUEBA
+-- ==========================================================
+INSERT INTO Habitaciones (nombre) VALUES
+('Habitación 1'),
+('Habitación 2'),
+('Habitación 3'),
+('Habitación 4'),
+('Habitación 5'),
+('Habitación 6');
+
+-- Ejemplo de huésped y reserva de prueba:
+-- INSERT INTO Huespedes (dni, primer_nombre, primer_apellido, telefono, ciudad, pais) VALUES ('123456', 'Juan', 'Pérez', '555-1234', 'Ciudad', 'País');
+-- INSERT INTO Reservas (id_huesped, fechaReservacion, fechaAnticipo, valorAnticipo, fecha_ingreso, fecha_salida, fecha_factura, numero_factura, totalPagado, tipo_contacto, tipo_pago) VALUES (1, '2025-11-01', '2025-11-01', 1000, '2025-11-10', '2025-11-15', NULL, NULL, 5000, 'booking', 'efectivo');
+
+-- ==========================================================
+-- 5️⃣ CORRECCIÓN DE VALORES NULOS (si tienes datos previos)
+-- ==========================================================
+UPDATE Reservas SET valorAnticipo = 0 WHERE valorAnticipo IS NULL OR valorAnticipo = '';
+UPDATE Reservas SET totalPagado = 0 WHERE totalPagado IS NULL OR totalPagado = '';
+UPDATE Reservas SET saldo_pendiente = totalPagado - valorAnticipo WHERE saldo_pendiente IS NULL OR saldo_pendiente = '' OR saldo_pendiente != (totalPagado - valorAnticipo);
+
+-- ==========================================================
+-- 6️⃣ CONSULTAS
+-- ==========================================================
+SELECT * FROM Huespedes;
+SELECT * FROM Habitaciones;
+SELECT * FROM Reservas;
+SELECT * FROM Reservas_Habitaciones;
+
+DB_HOST=localhost
+DB_PORT=3306
+DB_USER=root
+#DB_PASSWORD=NFRmtc/*
+DB_PASSWORD=080324
+DB_NAME=Hotel
+
+
+
