@@ -37,13 +37,13 @@ router.post('/', async (req, res) => {
     INSERT INTO Huespedes (
       dni, nit, primer_nombre, segundo_nombre, primer_apellido,
       segundo_apellido, apellido_casada, fecha_nacimiento, telefono,
-      ciudad, pais
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      email, ciudad, pais
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `;
   const values = [
     d.dni, d.nit, d.primer_nombre, d.segundo_nombre, d.primer_apellido,
     d.segundo_apellido, d.apellido_casada, d.fecha_nacimiento, d.telefono,
-    d.ciudad, d.pais
+    d.email, d.ciudad, d.pais
   ];
   try {
     await db.query(sql, values);
@@ -61,13 +61,13 @@ router.put('/:id', async (req, res) => {
     UPDATE Huespedes SET
       dni = ?, nit = ?, primer_nombre = ?, segundo_nombre = ?, primer_apellido = ?,
       segundo_apellido = ?, apellido_casada = ?, fecha_nacimiento = ?, telefono = ?,
-      ciudad = ?, pais = ?
+      email = ?, ciudad = ?, pais = ?
     WHERE id_huesped = ?
   `;
   const values = [
     d.dni, d.nit, d.primer_nombre, d.segundo_nombre, d.primer_apellido,
     d.segundo_apellido, d.apellido_casada, d.fecha_nacimiento, d.telefono,
-    d.ciudad, d.pais, id
+    d.email, d.ciudad, d.pais, id
   ];
   try {
     const [result] = await db.query(sql, values);

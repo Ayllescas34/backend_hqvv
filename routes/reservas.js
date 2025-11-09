@@ -100,10 +100,9 @@ router.get('/con-habitaciones', async (req, res) => {
 });
 
 router.put('/:id/pago-complemento', async (req, res) => {
-  const { pago_complemento, fecha_pago_complemento } = req.body;
+  const { pago_complemento, fecha_pago_complemento, fecha_factura, numero_factura } = req.body;
   const { id } = req.params;
   try {
-    // 1. Obtener el valorAnticipo y saldo_pendiente actual
     const [rows] = await db.query('SELECT valorAnticipo, saldo_pendiente FROM Reservas WHERE id_reserva = ?', [id]);
     if (rows.length === 0) return res.status(404).json({ error: 'Reserva no encontrada' });
 
@@ -111,21 +110,17 @@ router.put('/:id/pago-complemento', async (req, res) => {
     const saldoPendienteActual = Number(rows[0].saldo_pendiente) || 0;
     const pagoComplementoNum = Number(pago_complemento) || 0;
 
-    // Validar que el pago complemento no exceda el saldo pendiente
     if (pagoComplementoNum > saldoPendienteActual) {
       return res.status(400).json({ error: 'El pago complemento no puede ser mayor al saldo pendiente.' });
     }
 
-    // Sumar el pago complemento al anticipo
     const nuevoAnticipo = valorAnticipoActual + pagoComplementoNum;
 
-    // Actualizar los campos en la reserva (el trigger calcula saldo_pendiente)
     await db.query(
-      `UPDATE Reservas SET pago_complemento = ?, fecha_pago_complemento = ?, valorAnticipo = ? WHERE id_reserva = ?`,
-      [pagoComplementoNum, fecha_pago_complemento, nuevoAnticipo, id]
+      `UPDATE Reservas SET pago_complemento = ?, fecha_pago_complemento = ?, valorAnticipo = ?, fecha_factura = ?, numero_factura = ? WHERE id_reserva = ?`,
+      [pagoComplementoNum, fecha_pago_complemento, nuevoAnticipo, fecha_factura, numero_factura, id]
     );
 
-    // Consultar el saldo pendiente actualizado
     const [updated] = await db.query('SELECT saldo_pendiente FROM Reservas WHERE id_reserva = ?', [id]);
     res.json({ message: 'Pago complementario actualizado correctamente', saldo_pendiente: updated[0].saldo_pendiente });
   } catch (err) {
